@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "ejs": "^3.1.6",
+    "express": "^4.17.3",
+    "jsha": "^1.0.0",
+    "jssha": "^3.2.0",
+    "method-override": "^3.0.0",
+    "pg": "^8.7.3"
+  },
+  "name": "beefsteak",
+  "description": "A task-oriented time management app that's a bit juicer than your average pomodoro.",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thereseLYR/beefsteak.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thereseLYR/beefsteak/issues"
+  },
+  "homepage": "https://github.com/thereseLYR/beefsteak#readme",
+  "type": "module"
+}
