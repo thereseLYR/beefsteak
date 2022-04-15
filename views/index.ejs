@@ -94,9 +94,8 @@
     ></script>
 
     <script>
-      // laps are saved as values within a 1D array
       // elapsed time must start from ~25min and count down
-      let currentElapsedTime = 6;
+      let currentElapsedTime = 6; // short duration for testing
       let stopped = true;
       let timerInterval;
 
@@ -145,7 +144,6 @@
           startButtonFunction();
         });
         stopButton.addEventListener("click", () => {
-          // call a fuction to stop the countdown
           stopButtonFunction();
         });
       };
