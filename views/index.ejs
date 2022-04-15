@@ -12,8 +12,12 @@
     <div id="timeSection" class="timeSection">
       <h1 id="elapsedTime" class="elapsedTime">25 : 00</h1>
       <div id="functionButtons" class="functionButtons">
-        <button id="startButton" class="button">Start</button>
-        <button id="stopButton" class="button">Stop</button>
+        <button id="startButton" class="btn btn-primary disabled" disabled>
+          Start
+        </button>
+        <button id="stopButton" class="btn btn-primary disabled" disabled>
+          Stop
+        </button>
       </div>
     </div>
 
@@ -92,61 +96,5 @@
       integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
       crossorigin="anonymous"
     ></script>
-
-    <script>
-      // elapsed time must start from ~25min and count down
-      let currentElapsedTime = 6; // short duration for testing
-      let stopped = true;
-      let timerInterval;
-
-      const showTime = function (element, elapsedTime) {
-        // elapsedTime is in milliseconds
-
-        if (elapsedTime <= 0) {
-          console.log("TIMER RUNOUT");
-          window.alert(`Time's up!`);
-          stopButtonFunction();
-          // idk if i can force a POST request after the timer runs out
-        } else {
-          let minutes = Math.floor(elapsedTime / 60);
-          let seconds = elapsedTime - minutes * 60;
-
-          let timeStr = "";
-          timeStr += minutes.toString().padStart(2, "0") + " : ";
-          timeStr += seconds.toString().padStart(2, "0");
-          // console.log(timeStr);
-          element.innerHTML = timeStr;
-          return element.innerHTML;
-        }
-      };
-
-      const stopButtonFunction = function () {
-        clearInterval(timerInterval);
-      };
-
-      const startButtonFunction = function () {
-        stopped = false;
-        timerInterval = setInterval(() => {
-          currentElapsedTime -= 1;
-          console.log("currentElapsedTime", currentElapsedTime);
-          showTime(document.getElementById("elapsedTime"), currentElapsedTime);
-        }, 1000);
-      };
-
-      const startButton = document.getElementById("startButton");
-      const stopButton = document.getElementById("stopButton");
-      const resetButton = document.getElementById("resetButton");
-      const lapButton = document.getElementById("lapButton");
-
-      // Setting Event Listeners
-      window.onload = function () {
-        startButton.addEventListener("click", () => {
-          startButtonFunction();
-        });
-        stopButton.addEventListener("click", () => {
-          stopButtonFunction();
-        });
-      };
-    </script>
   </body>
 </html>

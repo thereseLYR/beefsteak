@@ -39,17 +39,19 @@ const loginCheck = (req, res, next) => {
     res.render('error', { message: 'Please log in to continue.' });
   }
   req.isUserLoggedIn = false; // default value
-
   const idHash = getHash(req.cookies.userId);
-
   if(req.cookies.userIdHash === idHash){
     req.isUserLoggedIn = true;
     res.locals.userId = req.cookies.userIdHash; // pass userId of the user into middleware (as hashed).
+    // use app.locals to define your own 'global variables' in EJS files. useful for things like navbears where you want to have dynamic content like updating a welcome message with the user's name.
   }
   next();
 };
 
 app.get('/', (req, res) => {
+  if(req.cookies.sessionTasks){
+    res.redirect('/inprogress')
+  }
   res.render('index')
   })
 
@@ -57,7 +59,7 @@ app.post('/tasklist/list', async (req, res) => { // async gives access to await 
   try {
     const inputs = req.body;
     // let taskCookieObj = { task_list_id: 0, task_ids_array: []};
-    const taskCookieObj = { task_ids_array: [] };
+    const taskCookieObj = { task_names_array: [] };
 
     let listQueryString = `INSERT INTO task_lists (list_name, list_description) VALUES ($1, $2) RETURNING id`;
     const listQueryValues = [ inputs['list-name'], inputs['list-description'] ]
@@ -66,36 +68,29 @@ app.post('/tasklist/list', async (req, res) => { // async gives access to await 
     // edit query to include userID if user is logged in
     console.log('req.cookies', req.cookies)
     if(req.cookies.userID){
-      console.log('ID cookie found. ID:', req.cookies.userID)
       listQueryValues.push(req.cookies.userID)
-      console.log('listQueryValues edited:', listQueryValues)
       listQueryString = `INSERT INTO task_lists (list_name, list_description, assigned_user) VALUES ($1, $2, $3) RETURNING id`
-      console.log('listQueryString edited')
     }
 
     pool
       .query(listQueryString, listQueryValues)
       .then ((result) => {
-        // console.log(result)
         const latestTasklistID = result['rows'][0]['id'];
-        // console.log("latestTasklistID is:", latestTasklistID);
-        taskCookieObj['task_list_id'] = latestTasklistID // why isnt this updating :(
-
+        taskCookieObj['task_list_id'] = latestTasklistID
         taskQueryArr.forEach((taskElement) => {
           const taskQueryString = `INSERT INTO tasks (list_id, task_name) VALUES ($1, $2)`;
-          console.log("inserting tasks under listID:", latestTasklistID);
           const taskQueryValues = [ latestTasklistID, taskElement ];
-          taskCookieObj['task_ids_array'].push(taskElement)
-          console.log(taskCookieObj)
+          taskCookieObj['task_names_array'].push(taskElement)
           pool.query(taskQueryString, taskQueryValues);
         })
       })
-    console.log('taskCookieObj:', taskCookieObj)
-    console.log('taskCookieObj[task_ids_array]:', taskCookieObj.task_ids_array)
-    /// basically tasklistobj is not being updated as expected
-    res.cookie('sessionTasks', taskCookieObj)
-
-    res.redirect('/');
+      .then( () => {
+        // console.log('taskCookieObj:', taskCookieObj)
+        // cookie will be used to generate list for users to strike off their tasks
+        res.cookie('sessionTasks', taskCookieObj)
+        // change redirect to another page later
+        res.redirect('/inprogress');
+      })
   } catch (err) {
     console.log('ERROR CAUGHT')
     console.error(err.message)
@@ -112,7 +107,7 @@ app.post('/register', (req, res) => {
   const hashedPassword = getHash(req.body.password)
   
   // store the hashed password in our DB
-  const queryString = 'INSERT INTO users (user_name, first_name, last_name, email, password) VALUES ($1, $2, $3, $4, $5)' // to show ourselves what data was sent
+  const queryString = 'INSERT INTO users (user_name, first_name, last_name, email, password) VALUES ($1, $2, $3, $4, $5)'
   const values = [ req.body.user_name, req.body.first_name, req.body.last_name, req.body.email, hashedPassword ];
 
   pool
@@ -124,7 +119,6 @@ app.post('/register', (req, res) => {
     console.log('ERROR CAUGHT')
     console.log(error.message);
   });
-  // use app.locals to define your own 'global variables' in EJS files. useful for things like navbears where you want to have dynamic content like updating a welcome message with the user's name.
 })
 
 app.get('/login', (req, res) => {
@@ -162,6 +156,48 @@ app.post('/login', (req, res) => {
   });
   });
 
+app.get('/new', (req, res) => {
+  res.clearCookie('sessionTasks')
+  res.redirect('/')
+  })
+
+app.get('/inprogress', (req, res) => {
+  if(!req.cookies.sessionTasks){
+    res.redirect('/')
+  }
+
+  const cookieTasksObj = req.cookies.sessionTasks
+  const DBTasksObj = {}
+  // use cookieTaskObj to query a DBTasksObj, which pulls more detailed information like tasklist name, description, and task names.
+  const selectListQueryStr = `SELECT * FROM task_lists WHERE id = ${cookieTasksObj.task_list_id}`
+  const selectTasksQueryStr = `SELECT * FROM tasks WHERE list_id = ${cookieTasksObj.task_list_id}`
+  // pass DBtasksObj to EJS, which generates rows to mark completion with POST requests
+  pool
+    .query(selectListQueryStr)
+    .then((result) => {
+      DBTasksObj['list_info'] = result['rows']
+    })
+    .then(() => {
+      pool
+        .query(selectTasksQueryStr)
+        .then((result) => {
+        DBTasksObj['task_info'] = result['rows']
+      })
+        .then(() => {
+        res.render('tasks-inprogress', DBTasksObj) 
+        })  
+    })
+})
+
+app.put("/inprogress/task/:taskID/edit", (req, res) => {
+  const taskID = req.params.taskID
+  const taskCompletionQueryStr = `UPDATE tasks SET completion_datetime = now() WHERE id = ${taskID}`
+  pool
+    .query(taskCompletionQueryStr)
+    .then((result) =>{
+      console.log(result)
+    })
+})
 
 app.get('/profile', loginCheck, (req, res) => {
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
