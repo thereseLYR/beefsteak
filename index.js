@@ -181,9 +181,11 @@ app.get('/inprogress', (req, res) => {
       pool
         .query(selectTasksQueryStr)
         .then((result) => {
+          // to remove elements of task_info if task name is empty
         DBTasksObj['task_info'] = result['rows']
       })
         .then(() => {
+          // console.log(DBTasksObj['task_info'][0])
         res.render('tasks-inprogress', DBTasksObj) 
         })  
     })
@@ -191,18 +193,29 @@ app.get('/inprogress', (req, res) => {
 
 app.put("/inprogress/task/:taskID/edit", (req, res) => {
   const taskID = req.params.taskID
-  const taskCompletionQueryStr = `UPDATE tasks SET completion_datetime = now() WHERE id = ${taskID}`
+  const taskCompletionQueryStr = `UPDATE tasks SET completion_datetime = now(), completion_status = TRUE WHERE id = ${taskID}`
   pool
     .query(taskCompletionQueryStr)
     .then((result) =>{
-      console.log(result)
+      // console.log(result)
+      res.redirect('/inprogress')
     })
+})
+
+app.post("/complete/list/:listID", (req, res) => {
+  // query to update tasklist completion status and datetime based on cookie information
+  // delete tasks cookie
+  // render completion page with new 'last session' cookie
+  res.render('tasks-complete')
 })
 
 app.get('/profile', loginCheck, (req, res) => {
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in.');
   }
+  // to add all tasklists owned by the user
+  // more queries
+  // to add graph showing most recent performance
   res.render('profile')
 })
 
