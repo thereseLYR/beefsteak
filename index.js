@@ -200,13 +200,29 @@ app.put("/inprogress/task/:taskID/edit", (req, res) => {
       // console.log(result)
       res.redirect('/inprogress')
     })
+    .catch((error) => {
+      console.log('ERROR CAUGHT')
+      console.log(error.message);
+    })
+    
 })
 
 app.post("/complete/list/:listID", (req, res) => {
   // query to update tasklist completion status and datetime based on cookie information
-  // delete tasks cookie
-  // render completion page with new 'last session' cookie
-  res.render('tasks-complete')
+  const listID = req.params.listID
+  const listCompletionQueryStr = `UPDATE task_lists SET completion_datetime = now(), completion_status = TRUE WHERE id = ${listID}`
+  pool
+    .query(listCompletionQueryStr)
+    .then((result) => {
+      res.clearCookie('sessionTasks') // delete tasks cookie
+      res.cookie('lastSession', listID) // create new cookie for prev session
+      // to add report for last session in EJS
+      res.render('tasks-complete')
+    })
+    .catch((error) => {
+    console.log('ERROR CAUGHT')
+    console.log(error.message);
+    })
 })
 
 app.get('/profile', loginCheck, (req, res) => {

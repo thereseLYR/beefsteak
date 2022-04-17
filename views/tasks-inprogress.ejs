@@ -32,7 +32,6 @@
 
   <!-- tasks are visually marked as complete now -->
   <div class="list-group mx-5">
-    <!-- to let SUBMIT button appear to mark list as complete once all tasks have been marked complete -->
     <% for (let i = 0; i < task_info.length; i += 1) { %>
     <% if(task_info[i]['completion_status'] == true){ %>
     <% completedTasksCount += 1 %>
@@ -42,7 +41,7 @@
       </label>
     </form>
     <% } else { %>
-    <form action="/inprogress/task/<%= task_info[i]['id'] %>" method="POST">
+    <form action="/inprogress/task/<%= task_info[i]['id'] %>/edit?_method=PUT %>" method="POST">
       <label class="list-group-item">
         <input class="form-check-input me-1" type="submit" value="" />
         <%= task_info[i]['task_name'] %>
@@ -53,7 +52,7 @@
 
   <% if(completedTasksCount == task_info.length) { %>
   <!-- hidden form for submitting PUT request once all tasks are complete/timer runout -->
-  <form action="/complete/list/<%= list_info[0]['id'] %>" method="POST">
+  <form id="submitButton" action="/complete/list/<%= list_info[0]['id'] %>" method="POST">
     <input type="hidden">
     <label class="d-grid gap-2 my-2 mx-5">
       <input class="btn btn-primary" type="submit" value="All Done!">
@@ -72,7 +71,7 @@
 
   <script>
     // elapsed time must start from ~25min and count down
-    // use window.localstorage ???
+    // use window.localstorage to store timer information locally, so that timer does not reset on page refresh when PUT reqs are sent to record task completion
     let currentElapsedTime;
     let stopped = true;
     let timerInterval;
@@ -110,19 +109,15 @@
     const showTime = function(element, elapsedTime) {
       // elapsedTime is in seconds
       if (elapsedTime <= 0) {
-        // console.log("TIMER RUNOUT");
         stopButtonFunction();
         window.alert(`Time's up!`);
-        // do fetch req to post body
-        // window.location.replace('/complete')
-        // idk if i can force a POST request after the timer runs out
-        // possible by sending a hidden POST form
+        // force a POST by sending a hidden form
         post("/complete/list/<%= list_info[0]['id']%>");
       } else {
         let minutes = Math.floor(elapsedTime / 60);
         let seconds = elapsedTime - minutes * 60;
 
-        window.localStorage.setItem("currentMillisecRemaining", elapsedTime);
+        window.localStorage.setItem("currentSecRemaining", elapsedTime);
 
         let timeStr = "";
         timeStr += minutes.toString().padStart(2, "0") + " : ";
@@ -136,12 +131,10 @@
     const stopButtonFunction = function() {
       elapsedTime = null;
       clearInterval(timerInterval);
-      // how do i send a post request after this :/
     };
 
     const startButtonFunction = function() {
       stopped = false;
-
       timerInterval = setInterval(() => {
         currentElapsedTime -= 1;
         console.log("currentElapsedTime", currentElapsedTime);
@@ -151,25 +144,18 @@
 
     // Timer setup
 
-    if (window.localStorage.getItem("currentMillisecRemaining") !== null) {
-      console.log(
-        "time detected:",
-        window.localStorage.getItem("currentMillisecRemaining")
-      );
+    if (window.localStorage.getItem("currentSecRemaining") !== null) {
       currentElapsedTime = window.localStorage.getItem(
-        "currentMillisecRemaining"
+        "currentSecRemaining"
       );
       // start timer immediately if time is detected
       startButtonFunction();
     } else {
       currentElapsedTime = 16; // ~ 15s, short duration for testing
     }
-    // window.localStorage.setItem("currentMillisecRemaining")
 
     const startButton = document.getElementById("startButton");
     const stopButton = document.getElementById("stopButton");
-    // const resetButton = document.getElementById("resetButton");
-    // const lapButton = document.getElementById("lapButton");
 
     // Setting Event Listeners
     window.onload = function() {
