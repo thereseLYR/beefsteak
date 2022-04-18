@@ -16,10 +16,14 @@
     <p class="text-center text-muted">
       <%= listData[0]['list_description'] %>
     </p>
+    <p class="text-center text-muted">
+      <!-- need to grab the name instead of ID -->
+      By @<%= userData[0]['user_name'] %>
+    </p>
   </div>
 
   <div class="mx-5">
-    <table class="table table-striped">
+    <table class="table table-danger table-hover">
       <thead>
         <tr>
           <th scope="col">#</th>
@@ -36,22 +40,34 @@
           <% if(taskData[i]['completion_status'] == true) { %>
           <td>✔</td>
           <td><%= taskData[i]['duration']['minutes'] %>:<%= taskData[i]['duration']['seconds'] %> </td>
+          <% } else { %>
+          <td>❌</td>
+          <td></td>
           <% } %>
         </tr>
         <% } %>
       </tbody>
     </table>
 
+    <!-- try to render these buttons only if user is logged in -->
+    <% if(userEditStatus == true){ %>
     <div class="d-grid gap-2">
-      <button class="btn btn-primary" type="button">Button</button>
-      <button class="btn btn-primary" type="button">Button</button>
+
+      <form action="/complete/list/:listID/edit?_method=PUT" method="POST">
+        <input type="hidden">
+        <label class="d-grid gap-2">
+          <input class="btn btn-info" type="submit" value="Edit ✏">
+        </label>
+      </form>
+
       <form id="submitButton" action="/complete/list/:listID/delete?_method=DELETE" method="POST">
         <input type="hidden">
         <label class="d-grid gap-2">
-          <input class="btn btn-primary" type="submit" value="Delete ❌">
+          <input class="btn btn-danger" type="submit" value="Delete 🚫">
         </label>
       </form>
     </div>
+    <% } %>
 
   </div>
 

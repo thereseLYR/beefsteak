@@ -40,11 +40,12 @@ const getHash = (input) => {
 };
 
 const loginCheck = (req, res, next) => {
+  console.log('attempting login check...')
   if (!req.cookies.userIdHash) {
     res.render('error', { message: 'Please log in to continue.' });
   }
   req.isUserLoggedIn = false; // default value
-  const idHash = getHash(req.cookies.userId);
+  const idHash = getHash(req.cookies.userID);
   if(req.cookies.userIdHash === idHash){
     req.isUserLoggedIn = true;
     res.locals.userId = req.cookies.userIdHash; // pass userId of the user into middleware (as hashed).
@@ -53,8 +54,6 @@ const loginCheck = (req, res, next) => {
   next();
 };
 
-const renderCompletedTasklist = function(listID){}
-
 app.get('/', (req, res) => {
   if(req.cookies.sessionTasks){
     res.redirect('/inprogress')
@@ -62,7 +61,7 @@ app.get('/', (req, res) => {
   res.render('index')
   })
 
-app.post('/tasklist/list', async (req, res) => { // async gives access to await - wait for function to complete before it continues
+app.post('/tasklist/list', (req, res) => {
     const inputs = req.body;
     // let taskCookieObj = { task_list_id: 0, task_ids_array: []};
     const taskCookieObj = { task_names_array: [] };
@@ -162,6 +161,16 @@ app.post('/login', (req, res) => {
   });
   });
 
+app.get('/group', loginCheck, (req, res) => {
+  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
+    res.status(403).send('please log in.');
+  } else {
+    // check if user is currently in a group
+    // if yes, redirect to group-specific page with task history and stats
+    // if no, render page to prompt user to join a group or create a new group
+  }
+})
+
 app.get('/new', (req, res) => {
   res.clearCookie('sessionTasks')
   res.redirect('/')
@@ -224,6 +233,7 @@ app.post("/complete/list/:listID", (req, res) => {
       res.clearCookie('sessionTasks') // delete tasks cookie
       res.cookie('lastSession', listID) // create new cookie for prev session
       // to add report for last session in EJS
+      // this probably needs a fix to include the data object, or to split into 2 separate EJS pages (1 POST, 1 GET)
       res.render('tasks-complete')
     })
     .catch((error) => {
@@ -236,57 +246,108 @@ app.get('/complete/list/:listID', (req, res) => {
   const requestedListID = req.params.listID
   const listQueryStr = `SELECT * FROM task_lists WHERE id = ${requestedListID}`
   const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks where list_id = ${requestedListID} ORDER BY id ASC`
+  const groupQueryStr = `SELECT users.user_name, users.id, users.groupid FROM users INNER JOIN task_lists ON task_lists.assigned_user = users.id WHERE task_lists.id = ${requestedListID}`
 
   const results = Promise.all([
     pool.query(listQueryStr),
-    pool.query(taskQueryStr)
+    pool.query(taskQueryStr),
+    pool.query(groupQueryStr)
   ])
 
   results.then((combinedResults) => {
-    const [ listQueryResults, taskQueryResults ] = combinedResults;
+    const [ listQueryResults, taskQueryResults, groupQueryResults ] = combinedResults;
     const listData = listQueryResults.rows
     const taskData = taskQueryResults.rows
+    const userData = groupQueryResults.rows
+
     // taskdata contains a PostgresInterval object that has the properties of minutes, seconds, and milliseconds
     // we will only use minutes and seconds for our purpouses
     // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
-    const listSummaryObj = {listData, taskData}
-    // taskdata is an array of 3 objects
+    const listSummaryObj = {listData, taskData, userData}
+
+    // ensures that edit/delete buttons only appear for the owning logged-in user
+    if(req.cookies.userID == userData[0]['id']){
+      listSummaryObj['userEditStatus'] = true
+      console.log(listSummaryObj)
+    } else {
+      listSummaryObj['userEditStatus'] = false
+    }
+    
     res.render('tasks-complete', listSummaryObj);
   })
+})
+
+app.put('/complete/list/:listID/edit', (req, res) => {
+  // check if user if allowed to edit page (check if assigned user)
+})
+
+app.delete('/complete/list/:listID/delete', (req, res) => {
+  // check if user if allowed to edit page (check if assigned user)
+  // render confirmation modal
+  // query to delete data
+  // redirect to home/profile page
 })
 
 app.get("/complete/last", (req, res) => {
   const latestTasklistID = req.cookies.lastSession
   const listQueryStr = `SELECT * FROM task_lists WHERE id = ${latestTasklistID}`
-  const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks where list_id = ${latestTasklistID} ORDER BY id ASC`
+  const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks WHERE list_id = ${latestTasklistID} ORDER BY id ASC`
+  const groupQueryStr = `SELECT users.user_name, users.id, users.groupid FROM users INNER JOIN task_lists ON task_lists.assigned_user = users.id WHERE task_lists.id = ${latestTasklistID}`
 
   const results = Promise.all([
     pool.query(listQueryStr),
-    pool.query(taskQueryStr)
+    pool.query(taskQueryStr),
+    pool.query(groupQueryStr)
   ])
 
   results.then((combinedResults) => {
-    const [ listQueryResults, taskQueryResults ] = combinedResults;
+    const [ listQueryResults, taskQueryResults, groupQueryResults ] = combinedResults;
     const listData = listQueryResults.rows
     const taskData = taskQueryResults.rows
-    // taskdata contains a PostgresInterval object that has the properties of minutes, seconds, and milliseconds
-    // we will only use minutes and seconds for our purpouses
-    // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
-    const listSummaryObj = {listData, taskData}
-    // taskdata is an array of 3 objects
+    const userData = groupQueryResults.rows
+    const userEditStatus = false
+    const listSummaryObj = {listData, taskData, userData, userEditStatus}
     res.render('tasks-complete', listSummaryObj);
   })
+})
 
+app.get('/logout', (req, res) => {
+  res.clearCookie('userIdHash')
+  res.clearCookie('userID')
+  res.redirect('/')
 })
 
 app.get('/profile', loginCheck, (req, res) => {
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in.');
-  } 
-  // to add all tasklists owned by the user
-  // more queries
-  // to add graph showing most recent performance
-  res.render('profile')
+  } else {
+    // to add all tasklists owned by the user
+    const userHistoryQueryStr = `SELECT * FROM task_lists WHERE assigned_user = ${req.cookies.userID}`;
+    // const userDataQueryStr = `SELECT * from users WHERE id = ${req.cookies.userID}`;
+
+    pool
+      .query(userHistoryQueryStr)
+      .then((results) => {
+        const userTasks = results.rows;
+        // more queries
+        // to add graph showing most recent performance
+        res.render('profile', { userTasks })
+      })
+    }
+})
+
+app.get('/profile/view/:userID', (req, res) => {
+  const requestedUserID = req.params.userID
+  const userHistoryQueryStr = `SELECT * FROM task_lists WHERE assigned_user = ${requestedUserID}`
+
+  pool
+      .query(userHistoryQueryStr)
+      .then((results) => {
+        const userTasks = results.rows;
+        // more queries - to add user information such as firstname and lastname, display ID
+        // to add graph showing most recent performance
+        res.render('profile', { userTasks })
+      })
 })
 
 app.listen(3000, () => console.log('Server Started'))
