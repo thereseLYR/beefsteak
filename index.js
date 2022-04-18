@@ -24,6 +24,11 @@ const pool = new Pool(pgConnectionConfigs);
 
 const SALT = ''
 
+/**
+ * hashes an input string according to the salt variable
+ * @param {string} input
+ * @return {string} - hashed string result after hashing and salting
+ */
 const getHash = (input) => {
   // create new SHA object
   const shaObj = new jsSHA('SHA-512', 'TEXT', { encoding: 'UTF8' });
@@ -48,6 +53,8 @@ const loginCheck = (req, res, next) => {
   next();
 };
 
+const renderCompletedTasklist = function(listID){}
+
 app.get('/', (req, res) => {
   if(req.cookies.sessionTasks){
     res.redirect('/inprogress')
@@ -56,7 +63,6 @@ app.get('/', (req, res) => {
   })
 
 app.post('/tasklist/list', async (req, res) => { // async gives access to await - wait for function to complete before it continues
-  try {
     const inputs = req.body;
     // let taskCookieObj = { task_list_id: 0, task_ids_array: []};
     const taskCookieObj = { task_names_array: [] };
@@ -91,10 +97,10 @@ app.post('/tasklist/list', async (req, res) => { // async gives access to await 
         // change redirect to another page later
         res.redirect('/inprogress');
       })
-  } catch (err) {
-    console.log('ERROR CAUGHT')
-    console.error(err.message)
-  }
+      .catch((error) => {
+        console.log('ERROR CAUGHT')
+        console.error(error.message)
+      })
   
 })
 
@@ -214,6 +220,7 @@ app.post("/complete/list/:listID", (req, res) => {
   pool
     .query(listCompletionQueryStr)
     .then((result) => {
+      console.log(result)
       res.clearCookie('sessionTasks') // delete tasks cookie
       res.cookie('lastSession', listID) // create new cookie for prev session
       // to add report for last session in EJS
@@ -225,10 +232,57 @@ app.post("/complete/list/:listID", (req, res) => {
     })
 })
 
+app.get('/complete/list/:listID', (req, res) => {
+  const requestedListID = req.params.listID
+  const listQueryStr = `SELECT * FROM task_lists WHERE id = ${requestedListID}`
+  const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks where list_id = ${requestedListID} ORDER BY id ASC`
+
+  const results = Promise.all([
+    pool.query(listQueryStr),
+    pool.query(taskQueryStr)
+  ])
+
+  results.then((combinedResults) => {
+    const [ listQueryResults, taskQueryResults ] = combinedResults;
+    const listData = listQueryResults.rows
+    const taskData = taskQueryResults.rows
+    // taskdata contains a PostgresInterval object that has the properties of minutes, seconds, and milliseconds
+    // we will only use minutes and seconds for our purpouses
+    // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
+    const listSummaryObj = {listData, taskData}
+    // taskdata is an array of 3 objects
+    res.render('tasks-complete', listSummaryObj);
+  })
+})
+
+app.get("/complete/last", (req, res) => {
+  const latestTasklistID = req.cookies.lastSession
+  const listQueryStr = `SELECT * FROM task_lists WHERE id = ${latestTasklistID}`
+  const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks where list_id = ${latestTasklistID} ORDER BY id ASC`
+
+  const results = Promise.all([
+    pool.query(listQueryStr),
+    pool.query(taskQueryStr)
+  ])
+
+  results.then((combinedResults) => {
+    const [ listQueryResults, taskQueryResults ] = combinedResults;
+    const listData = listQueryResults.rows
+    const taskData = taskQueryResults.rows
+    // taskdata contains a PostgresInterval object that has the properties of minutes, seconds, and milliseconds
+    // we will only use minutes and seconds for our purpouses
+    // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
+    const listSummaryObj = {listData, taskData}
+    // taskdata is an array of 3 objects
+    res.render('tasks-complete', listSummaryObj);
+  })
+
+})
+
 app.get('/profile', loginCheck, (req, res) => {
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in.');
-  }
+  } 
   // to add all tasklists owned by the user
   // more queries
   // to add graph showing most recent performance
