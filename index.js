@@ -40,7 +40,6 @@ const getHash = (input) => {
 };
 
 const loginCheck = (req, res, next) => {
-  console.log('attempting login check...')
   if (!req.cookies.userIdHash) {
     res.render('error', { message: 'Please log in to continue.' });
   }
@@ -108,7 +107,7 @@ app.get('/register', (req, res) => {
 })
 
 app.post('/register', (req, res) => {
-  console.log('attempting POST')
+  // console.log('attempting POST')
   const hashedPassword = getHash(req.body.password)
   
   // store the hashed password in our DB
@@ -162,12 +161,24 @@ app.post('/login', (req, res) => {
   });
 
 app.get('/group', loginCheck, (req, res) => {
+  // check if user is currently in a group
+  // if yes, redirect to group-specific page with task history and stats
+  // if no, render page to prompt user to join a group or create a new group
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in.');
   } else {
-    // check if user is currently in a group
-    // if yes, redirect to group-specific page with task history and stats
-    // if no, render page to prompt user to join a group or create a new group
+    const userGroupQueryStr = `SELECT groupid FROM users WHERE id = ${req.cookies.userID}`
+    pool
+      .query(userGroupQueryStr)
+      .then((result) => {
+        // console.log(result)
+        const userGroupId = result['rows'][0]['groupid']
+        if(userGroupId == null){
+          res.render('error', { message: 'hey you arent in a group, please join one.' });
+        } else {
+          res.render('error', { message: 'this is your group page.' });
+        }
+      })
   }
 })
 
@@ -234,7 +245,38 @@ app.post("/complete/list/:listID", (req, res) => {
       res.cookie('lastSession', listID) // create new cookie for prev session
       // to add report for last session in EJS
       // this probably needs a fix to include the data object, or to split into 2 separate EJS pages (1 POST, 1 GET)
-      res.render('tasks-complete')
+    })
+    .then(() => {
+      const listQueryStr = `SELECT * FROM task_lists WHERE id = ${listID}`
+      const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks where list_id = ${listID} ORDER BY id ASC`
+      const groupQueryStr = `SELECT users.user_name, users.id, users.groupid FROM users INNER JOIN task_lists ON task_lists.assigned_user = users.id WHERE task_lists.id = ${listID}`
+
+      const results = Promise.all([
+        pool.query(listQueryStr),
+        pool.query(taskQueryStr),
+        pool.query(groupQueryStr)
+      ])
+
+      results.then((combinedResults) => {
+        const [ listQueryResults, taskQueryResults, groupQueryResults ] = combinedResults;
+        const listData = listQueryResults.rows
+        const taskData = taskQueryResults.rows
+        const userData = groupQueryResults.rows
+
+        // taskdata contains a PostgresInterval object that has the properties of minutes, seconds, and milliseconds
+        // we will only use minutes and seconds for our purpouses
+        // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
+        const listSummaryObj = {listData, taskData, userData}
+
+        // ensures that edit/delete buttons only appear for the owning logged-in user
+        if(req.cookies.userID == userData[0]['id']){
+          listSummaryObj['userEditStatus'] = true
+          // console.log(listSummaryObj)
+        } else {
+          listSummaryObj['userEditStatus'] = false
+        }
+        res.render('tasks-complete', listSummaryObj);
+  })
     })
     .catch((error) => {
     console.log('ERROR CAUGHT')
@@ -268,7 +310,7 @@ app.get('/complete/list/:listID', (req, res) => {
     // ensures that edit/delete buttons only appear for the owning logged-in user
     if(req.cookies.userID == userData[0]['id']){
       listSummaryObj['userEditStatus'] = true
-      console.log(listSummaryObj)
+      // console.log(listSummaryObj)
     } else {
       listSummaryObj['userEditStatus'] = false
     }
@@ -279,6 +321,7 @@ app.get('/complete/list/:listID', (req, res) => {
 
 app.put('/complete/list/:listID/edit', (req, res) => {
   // check if user if allowed to edit page (check if assigned user)
+  // open a modal to edit the task descriptions
 })
 
 app.delete('/complete/list/:listID/delete', (req, res) => {
@@ -289,28 +332,12 @@ app.delete('/complete/list/:listID/delete', (req, res) => {
 })
 
 app.get("/complete/last", (req, res) => {
+  // redirect to list page based on laastSession cookie
   const latestTasklistID = req.cookies.lastSession
-  const listQueryStr = `SELECT * FROM task_lists WHERE id = ${latestTasklistID}`
-  const taskQueryStr = `SELECT id, task_name, completion_status, completion_datetime - created_at AS duration FROM tasks WHERE list_id = ${latestTasklistID} ORDER BY id ASC`
-  const groupQueryStr = `SELECT users.user_name, users.id, users.groupid FROM users INNER JOIN task_lists ON task_lists.assigned_user = users.id WHERE task_lists.id = ${latestTasklistID}`
-
-  const results = Promise.all([
-    pool.query(listQueryStr),
-    pool.query(taskQueryStr),
-    pool.query(groupQueryStr)
-  ])
-
-  results.then((combinedResults) => {
-    const [ listQueryResults, taskQueryResults, groupQueryResults ] = combinedResults;
-    const listData = listQueryResults.rows
-    const taskData = taskQueryResults.rows
-    const userData = groupQueryResults.rows
-    const userEditStatus = false
-    const listSummaryObj = {listData, taskData, userData, userEditStatus}
-    res.render('tasks-complete', listSummaryObj);
-  })
+  res.redirect(`/complete/list/${latestTasklistID}`)
 })
 
+// i should make a logout button
 app.get('/logout', (req, res) => {
   res.clearCookie('userIdHash')
   res.clearCookie('userID')
@@ -321,33 +348,37 @@ app.get('/profile', loginCheck, (req, res) => {
   if (req.isUserLoggedIn === false) { // test from loginCheck middleware
     res.status(403).send('please log in.');
   } else {
-    // to add all tasklists owned by the user
-    const userHistoryQueryStr = `SELECT * FROM task_lists WHERE assigned_user = ${req.cookies.userID}`;
-    // const userDataQueryStr = `SELECT * from users WHERE id = ${req.cookies.userID}`;
-
-    pool
-      .query(userHistoryQueryStr)
-      .then((results) => {
-        const userTasks = results.rows;
-        // more queries
-        // to add graph showing most recent performance
-        res.render('profile', { userTasks })
-      })
-    }
+    res.redirect(`/profile/view/${req.cookies.userID}`) // automatically send user to their own page
+  }
 })
 
 app.get('/profile/view/:userID', (req, res) => {
   const requestedUserID = req.params.userID
-  const userHistoryQueryStr = `SELECT * FROM task_lists WHERE assigned_user = ${requestedUserID}`
+  const userHistoryQueryStr = `SELECT * FROM task_lists WHERE assigned_user = ${requestedUserID}`;
+  const userDataQueryStr = `SELECT user_name, first_name, last_name from users WHERE id = ${requestedUserID}`;
 
-  pool
-      .query(userHistoryQueryStr)
-      .then((results) => {
-        const userTasks = results.rows;
-        // more queries - to add user information such as firstname and lastname, display ID
-        // to add graph showing most recent performance
-        res.render('profile', { userTasks })
-      })
+  const results = Promise.all([
+  pool.query(userHistoryQueryStr),
+  pool.query(userDataQueryStr),
+  ])
+
+  results.then((combinedResults) => {
+    const [ historyResults, userResults ] = combinedResults
+    const userTasks = historyResults.rows
+    const userData = userResults.rows[0]
+
+    // math to calculate completion stats
+    const numOfCreatedLists = userTasks.length
+    const completedListsArr = userTasks.filter((listObj) => {
+      return listObj['completion_status'] == true
+    })
+    const numOfCompletedLists = completedListsArr.length
+    const percentageListCompletion = Math.round((numOfCompletedLists/numOfCreatedLists)*100) // round percentage to nearest integer
+    const userStats = { numOfCreatedLists, percentageListCompletion}
+    const userSummaryObj = { userTasks, userData, userStats }
+
+    res.render('profile', userSummaryObj)
+  })
 })
 
 app.listen(3000, () => console.log('Server Started'))

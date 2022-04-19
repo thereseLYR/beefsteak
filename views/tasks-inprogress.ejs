@@ -112,6 +112,7 @@
         stopButtonFunction();
         window.alert(`Time's up!`);
         // force a POST by sending a hidden form
+        // currently always marks a task as complete - change route?
         post("/complete/list/<%= list_info[0]['id']%>");
       } else {
         let minutes = Math.floor(elapsedTime / 60);
@@ -159,6 +160,7 @@
 
     // Setting Event Listeners
     window.onload = function() {
+      startButtonFunction();
       startButton.addEventListener("click", () => {
         startButtonFunction();
       });

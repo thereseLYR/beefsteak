@@ -17,37 +17,13 @@
       <%= listData[0]['list_description'] %>
     </p>
     <p class="text-center text-muted">
-      <!-- need to grab the name instead of ID -->
-      By @<%= userData[0]['user_name'] %>
+      <!-- to add a link to user page -->
+      By <a href="/profile/view/<%= userData[0]['id'] %> ">@<%= userData[0]['user_name'] %></a>
     </p>
   </div>
 
   <div class="mx-5">
-    <table class="table table-danger table-hover">
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">Task Description</th>
-          <th scope="col">Completed?</th>
-          <th scope="col">Duration</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% for(let i = 0; i < taskData.length; i += 1) { %>
-        <tr>
-          <th scope="row"><%= i + 1 %> </th>
-          <td><%= taskData[i]['task_name'] %> </td>
-          <% if(taskData[i]['completion_status'] == true) { %>
-          <td>✔</td>
-          <td><%= taskData[i]['duration']['minutes'] %>:<%= taskData[i]['duration']['seconds'] %> </td>
-          <% } else { %>
-          <td>❌</td>
-          <td></td>
-          <% } %>
-        </tr>
-        <% } %>
-      </tbody>
-    </table>
+    <%- include('./partials/single-task-table.ejs') %>
 
     <!-- try to render these buttons only if user is logged in -->
     <% if(userEditStatus == true){ %>

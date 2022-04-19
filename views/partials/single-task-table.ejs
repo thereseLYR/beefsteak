@@ -1,0 +1,25 @@
+<table class="table table-danger table-hover">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Task Description</th>
+      <th scope="col">Completed?</th>
+      <th scope="col">Duration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% for(let i = 0; i < taskData.length; i += 1) { %>
+    <tr>
+      <th scope="row"><%= i + 1 %> </th>
+      <td><%= taskData[i]['task_name'] %> </td>
+      <% if(taskData[i]['completion_status'] == true) { %>
+      <td>✔</td>
+      <td><%= taskData[i]['duration']['minutes'] %>:<%= taskData[i]['duration']['seconds'] %> </td>
+      <% } else { %>
+      <td>❌</td>
+      <td></td>
+      <% } %>
+    </tr>
+    <% } %>
+  </tbody>
+</table>
