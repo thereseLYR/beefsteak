@@ -223,8 +223,8 @@ app.get('/inprogress', (req, res) => {
           DBTasksObj['task_info'] = result['rows']
       })
         .then(() => {
-          console.log(DBTasksObj['task_info'])
-        res.render('tasks-inprogress', DBTasksObj) 
+          // console.log(DBTasksObj['task_info'])
+          res.render('tasks-inprogress', DBTasksObj) 
         })  
     })
 })

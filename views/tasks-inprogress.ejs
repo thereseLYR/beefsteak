@@ -9,13 +9,11 @@
   <div id="cover"></div>
   <%- include('./partials/navbar.ejs') %>
 
-  <h1>fill-in-your-tasklist page</h1>
+  <div id="timeSection" class="text-center mx-2 my-5">
+    <h1 id="elapsedTime" style="font-size: 72pt;">25 : 00</h1>
+    <div id="functionButtons">
+      <button id="startButton" class="btn btn-primary">Start</button>
 
-  <div id="timeSection" class="timeSection">
-    <h1 id="elapsedTime" class="elapsedTime">25 : 00</h1>
-    <div id="functionButtons" class="functionButtons">
-      <button id="startButton" class="button">Start</button>
-      <button id="stopButton" class="button">Stop</button>
     </div>
   </div>
 
@@ -76,6 +74,9 @@
     let stopped = true;
     let timerInterval;
 
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+
     /**
      * sends a request to the specified url from a form. this will change the window location.
      * @param {string} path the path to send the post request to
@@ -134,14 +135,15 @@
       clearInterval(timerInterval);
     };
 
-    const startButtonFunction = function() {
+    const resumeTimer = function() {
+      startButton.style.display = 'none' // hide the start button once timer runs
       stopped = false;
       timerInterval = setInterval(() => {
         currentElapsedTime -= 1;
         // console.log("currentElapsedTime", currentElapsedTime);
         showTime(document.getElementById("elapsedTime"), currentElapsedTime);
       }, 1000);
-    };
+    }
 
     // Timer setup
 
@@ -150,20 +152,16 @@
         "currentSecRemaining"
       );
       // start timer immediately if time is detected
-      startButtonFunction();
+      resumeTimer();
     } else {
       currentElapsedTime = 1501; // full 25min duration, which doesnt seem to display correctly
       // currentElapsedTime = 16; // ~ 15s, short duration for testing
     }
 
-    const startButton = document.getElementById("startButton");
-    const stopButton = document.getElementById("stopButton");
-
     // Setting Event Listeners
     window.onload = function() {
-      // startButtonFunction();
       startButton.addEventListener("click", () => {
-        startButtonFunction();
+        resumeTimer();
       });
       stopButton.addEventListener("click", () => {
         stopButtonFunction();

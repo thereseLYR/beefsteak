@@ -57,13 +57,14 @@
       <tbody>
         <% for(let i = 0; i < userTasks.length; i += 1) { %>
         <tr>
-          <th scope="row"><a href="/complete/list/<%= userTasks[i]['id'] %>"><%= i + 1 %> </a> </th>
+          <th scope="row"><a href="/complete/list/<%= userTasks[i]['id'] %>"></a> </th>
           <td><%= userTasks[i]['list_name'] %> </td>
           <td class="d-none d-lg-block"><%= userTasks[i]['list_description'] %> </td>
           <% if(userTasks[i]['completion_status'] == true) { %>
           <td>✔</td>
           <% } else { %>
           <td>❌</td>
+          <%= i + 1 %>
           <% } %>
         </tr>
         <% } %>
