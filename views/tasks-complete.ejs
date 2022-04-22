@@ -29,14 +29,14 @@
     <% if(userEditStatus == true){ %>
     <div class="d-grid gap-2">
 
-      <form action="/complete/list/:listID/edit?_method=PUT" method="POST">
+      <!-- <form action="/complete/list/:listID/edit?_method=PUT" method="POST">
         <input type="hidden">
         <label class="d-grid gap-2">
           <input class="btn btn-info" type="submit" value="Edit ✏">
         </label>
-      </form>
+      </form> -->
 
-      <form id="submitButton" action="/complete/list/:listID/delete?_method=DELETE" method="POST">
+      <form id="submitButton" action="/complete/list/<%= listData[0]['id'] %> /delete?_method=DELETE" method="POST">
         <input type="hidden">
         <label class="d-grid gap-2">
           <input class="btn btn-danger" type="submit" value="Delete 🚫">

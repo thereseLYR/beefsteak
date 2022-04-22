@@ -1,4 +1,4 @@
-import express, { json, raw, request } from 'express';
+import express, { json, query, raw, request } from 'express';
 import pg from 'pg';
 import methodOverride from 'method-override';
 import jsSHA from 'jssha';
@@ -79,8 +79,7 @@ const checkIDInTable = async function(id, table){
         status = false
       } else {
         status = true
-      } console.log('status:', status);
-      return status
+      } return status
     })
 }
 
@@ -196,21 +195,33 @@ app.get('/groups', loginCheck, (req, res) => {
   // check if user is currently in a group
   // if yes, redirect to group-specific page with task history and stats
   // if no, render page to prompt user to join a group or create a new group
-  // const userGroupQueryStr = `SELECT groupid FROM users WHERE id = ${req.cookies.userID}` // to edit this query to pull information such as group name, description etc
   const userGroupQueryStr = `
   SELECT users.groupid, users.user_name, groups.group_name, groups.group_description FROM users 
   INNER JOIN groups ON groups.id = users.groupid
   WHERE users.id = ${req.cookies.userID};`
 
+  const groupTasksQueryStr = `
+  SELECT users.user_name, users.id AS user_id, task_lists.id, task_lists.assigned_user, task_lists.list_name, task_lists.completion_status from users
+  INNER JOIN groups ON groups.id = users.groupid
+  INNER JOIN task_lists on task_lists.assigned_user = users.id
+  WHERE users.groupid = ${req.cookies.groupID};
+  `
+
   pool
     .query(userGroupQueryStr)
     .then((result) => {
-      const dataObj = result.rows[0]
-      const userGroupId = dataObj['groupid']
-      if(userGroupId == null){
+      if(result.rows == 0){
         res.redirect('/groups/join');
       } else {
-        res.render('groups', dataObj);
+        const usersDataObj = result.rows[0]
+        pool
+          .query(groupTasksQueryStr)
+          .then((result) => {
+            const groupTasksData = result.rows
+            console.log(groupTasksData)
+            // console.log(result.rows.length)
+            res.render('groups', { usersDataObj, groupTasks: groupTasksData });
+          })
       }
     })
 })
@@ -313,7 +324,6 @@ app.put("/inprogress/task/:taskID/edit", (req, res) => {
     
 })
 
-// incomplete!!!
 app.post("/failed/list/:listID", (req, res) => {
   // user will be routed here is they take > 25min to complete a tasklist
   // mark list as failed overall, but individual tasks are still completed
@@ -322,7 +332,9 @@ app.post("/failed/list/:listID", (req, res) => {
   pool
     .query(listFailedQueryStr)
     .then((result) => {
-      res. redirect(`/complete/list/${listID}`)
+      res.clearCookie('sessionTasks') // delete tasks cookie
+      res.cookie('lastSession', listID) // create new cookie for prev session
+      res.redirect(`/complete/list/${listID}`)
     })
 })
 
@@ -333,11 +345,8 @@ app.post("/complete/list/:listID", (req, res) => {
   pool
     .query(listCompletionQueryStr)
     .then((result) => {
-      // console.log(result)
       res.clearCookie('sessionTasks') // delete tasks cookie
       res.cookie('lastSession', listID) // create new cookie for prev session
-      // to add report for last session in EJS
-      // this probably needs a fix to include the data object, or to split into 2 separate EJS pages (1 POST, 1 GET)
     })
     .then(() => {
       const listQueryStr = `SELECT * FROM task_lists WHERE id = ${listID}`
@@ -412,18 +421,21 @@ app.get('/complete/list/:listID', (req, res) => {
   })
 })
 
-// incomplete!!!
-app.put('/complete/list/:listID/edit', (req, res) => {
-  // check if user if allowed to edit page (check if assigned user)
-  // open a modal to edit the task descriptions
-})
-
-// incomplete!!!
-app.delete('/complete/list/:listID/delete', (req, res) => {
-  // check if user if allowed to edit page (check if assigned user)
-  // render confirmation modal
-  // query to delete data
-  // redirect to home/profile page
+app.delete('/complete/list/:listID/delete', loginCheck, (req, res) => {
+  // buttons for this method are only rendered if user is signed in + owns the tasklist, no additional check if user if allowed to edit page
+  console.log(req.params)
+  const listIdToDelete = req.params.listID
+  console.log(listIdToDelete)
+  const listDeletionQuery = `DELETE from task_lists WHERE id = ${listIdToDelete};`
+  pool
+    .query(listDeletionQuery)
+    .then((result) => {
+      res.redirect('/profile')
+    })
+    .catch((error) => {
+        console.log('ERROR CAUGHT');
+        console.error(error.message);
+      })
 })
 
 app.get("/complete/last", (req, res) => {
@@ -595,6 +607,7 @@ app.get('/profile/view/:userID', (req, res) => {
     const userStats = { numOfCreatedLists, percentageListCompletion}
     const chartStats = { dailyTasksCompletedStatsArr, dailyTimeStatsArr }
     const userSummaryObj = { userTasks, userData, userStats, chartStats }
+    // console.log(userSummaryObj)
     // console.log(chartStats)
     res.render('profile', userSummaryObj)
   })
