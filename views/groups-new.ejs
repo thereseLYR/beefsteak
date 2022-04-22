@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <%- include('./partials/head.ejs') %>
+</head>
+
+<body>
+  <div id="cover"></div>
+  <%- include('./partials/navbar.ejs') %>
+
+  <div class="my-2 mx-2">
+    <h1 class="text-center">New Group</h1>
+    <p class="fs-6 text-center">Make a group, add some friends, and get stuff done together!</p>
+
+    <div class="d-flex justify-content-center mx-2">
+      <form action="/groups/new" method="POST">
+
+        <div class="my-1">
+          <label for="group-name"><b>Group Name</b></label><br />
+          <input type="text" class="form-control" placeholder="Monke See Monke Do" name="group-name" required />
+        </div>
+
+        <div class="my-1">
+          <label for="group-description"><b>Group Description</b></label><br />
+          <textarea class="form-control" rows="5" cols="60" name="group-description" placeholder="Indie Game Project circa 2021" required></textarea>
+        </div>
+
+        <div class="d-grid gap-2 my-2">
+          <button class="btn btn-primary" type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <script>
+      src =
+        "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js";
+      integrity =
+        "sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p";
+      crossorigin = "anonymous";
+    </script>
+</body>
+
+</html>

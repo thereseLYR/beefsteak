@@ -48,6 +48,7 @@ const loginCheck = (req, res, next) => {
   if(req.cookies.userIdHash === idHash){
     req.isUserLoggedIn = true;
     res.locals.userId = req.cookies.userIdHash; // pass userId of the user into middleware (as hashed).
+    app.locals.userId = req.cookies.userId
     // use app.locals to define your own 'global variables' in EJS files. useful for things like navbears where you want to have dynamic content like updating a welcome message with the user's name.
   }
   next();
@@ -59,6 +60,28 @@ const getChartDataArr = function(statsArr, key){
     newCountArr.push(taskObject[key])
   })
   return newCountArr
+}
+
+/**
+ * queries a specified table to check if a particular ID is already in use
+ * async to allow the ID check query to complete before subsequent actions are taken after this function is called
+ * @param {number} id
+ * @param {string} table
+ */
+const checkIDInTable = async function(id, table){
+  const tableQueryStr = `SELECT * from ${table} WHERE id = ${id}`
+  let status
+
+  pool
+    .query(tableQueryStr)
+    .then((results) => {
+      if(results.rows.length == 0){
+        status = false
+      } else {
+        status = true
+      } console.log('status:', status);
+      return status
+    })
 }
 
 app.get('/', (req, res) => {
@@ -141,7 +164,7 @@ app.post('/login', (req, res) => {
   // retrieve the user entry using their email
   const usernameQueryvalues = [req.body.user_name];
   pool
-  .query('SELECT * from users WHERE user_name=$1', usernameQueryvalues)
+  .query('SELECT * FROM users WHERE user_name=$1', usernameQueryvalues)
   .then((result) => {
 
     if (result.rows.length === 0) { // not a valid username
@@ -158,6 +181,7 @@ app.post('/login', (req, res) => {
     }
     res.cookie('userID', retrievedUserInfo.id)
     res.cookie('userIdHash', getHash(retrievedUserInfo.id))
+    res.cookie('groupID', retrievedUserInfo.groupid)
     // redirect on login success
     res.redirect('/');
   })
@@ -172,26 +196,70 @@ app.get('/groups', loginCheck, (req, res) => {
   // check if user is currently in a group
   // if yes, redirect to group-specific page with task history and stats
   // if no, render page to prompt user to join a group or create a new group
-  if (req.isUserLoggedIn === false) { // test from loginCheck middleware
-    res.status(403).send('please log in.');
-  } else {
-    const userGroupQueryStr = `SELECT groupid FROM users WHERE id = ${req.cookies.userID}`
-    pool
-      .query(userGroupQueryStr)
-      .then((result) => {
-        // console.log(result)
-        const userGroupId = result['rows'][0]['groupid']
-        if(userGroupId == null){
-          res.redirect('/groups/join');
-        } else {
-          res.render('groups');
-        }
-      })
-  }
+  // const userGroupQueryStr = `SELECT groupid FROM users WHERE id = ${req.cookies.userID}` // to edit this query to pull information such as group name, description etc
+  const userGroupQueryStr = `
+  SELECT users.groupid, users.user_name, groups.group_name, groups.group_description FROM users 
+  INNER JOIN groups ON groups.id = users.groupid
+  WHERE users.id = ${req.cookies.userID};`
+
+  pool
+    .query(userGroupQueryStr)
+    .then((result) => {
+      const dataObj = result.rows[0]
+      const userGroupId = dataObj['groupid']
+      if(userGroupId == null){
+        res.redirect('/groups/join');
+      } else {
+        res.render('groups', dataObj);
+      }
+    })
 })
 
 app.get('/groups/join', loginCheck, (req, res) => {
   res.render('groups-join')
+})
+
+app.post('/groups/join', loginCheck, (req, res) => {
+  const groupIdToJoin = Number(req.body['groupId'])
+
+  const addUserToGroupQueryStr = `UPDATE users SET groupid = ${groupIdToJoin} WHERE id = ${req.cookies.userID};`
+  const groupExists = checkIDInTable(groupIdToJoin, 'groups');
+
+  if(groupExists){
+    pool
+      .query(addUserToGroupQueryStr)
+      .then((result) => {
+        res.cookie('groupID', groupIdToJoin)
+        res.redirect('/groups')
+      })
+      .catch((error) => {
+      console.log('ERROR CAUGHT')
+      console.log(error.message);
+      })
+  } else {
+    res.render('error', { message: 'Invalid group ID. Please try again.' })
+  }
+})
+
+app.get('/groups/new', loginCheck, (req, res) => {
+  res.render('groups-new')
+})
+
+app.post('/groups/new', loginCheck, (req, res) => {
+  console.log(req.body)
+  const createGroupQueryStr = `INSERT INTO groups (group_name, group_description, owner_id) VALUES ($1, $2, $3) RETURNING id`
+  const createGroupQueryValues = [ req.body['group-name'], req.body['group-description'], req.cookies['userID'] ]
+
+  pool
+    .query(createGroupQueryStr, createGroupQueryValues)
+    .then((results) => {
+      console.log('results:', results)
+      res.redirect('/groups')
+    })
+    .catch((error) => {
+    console.log('ERROR CAUGHT')
+    console.log(error.message);
+    })
 })
 
 app.get('/new', (req, res) => {
@@ -245,11 +313,17 @@ app.put("/inprogress/task/:taskID/edit", (req, res) => {
     
 })
 
+// incomplete!!!
 app.post("/failed/list/:listID", (req, res) => {
   // user will be routed here is they take > 25min to complete a tasklist
-  // DO NOT update tasklist status - render retry page
+  // mark list as failed overall, but individual tasks are still completed
   const listID = req.params.listID
-  res.render('error', { message: 'please try again~' })
+  const listFailedQueryStr = `UPDATE task_lists SET completion_status = FALSE WHERE id = ${listID}`
+  pool
+    .query(listFailedQueryStr)
+    .then((result) => {
+      res. redirect(`/complete/list/${listID}`)
+    })
 })
 
 app.post("/complete/list/:listID", (req, res) => {
@@ -338,11 +412,13 @@ app.get('/complete/list/:listID', (req, res) => {
   })
 })
 
+// incomplete!!!
 app.put('/complete/list/:listID/edit', (req, res) => {
   // check if user if allowed to edit page (check if assigned user)
   // open a modal to edit the task descriptions
 })
 
+// incomplete!!!
 app.delete('/complete/list/:listID/delete', (req, res) => {
   // check if user if allowed to edit page (check if assigned user)
   // render confirmation modal
@@ -360,6 +436,7 @@ app.get("/complete/last", (req, res) => {
 app.get('/logout', (req, res) => {
   res.clearCookie('userIdHash')
   res.clearCookie('userID')
+  res.clearCookie('groupID')
   res.redirect('/')
 })
 
@@ -377,7 +454,7 @@ app.get('/profile/view/:userID', (req, res) => {
   const userDataQueryStr = `SELECT user_name, first_name, last_name from users WHERE id = ${requestedUserID}`;
 
 // i know having lots of long queries is a dumb way to pull data
-// probably
+// each day interval has its own query, for 7 queries total + 1 weekly overview
 // but idk so i'll fix it later
 // might be able to use a loop to generate the query strings??
 
@@ -505,7 +582,7 @@ app.get('/profile/view/:userID', (req, res) => {
     const dailyTasksCompletedStatsArr = getChartDataArr(flattenedDailyStatsArr, 'count');
     const millisecTimeStatsArr = getChartDataArr(flattenedDailyStatsArr, 'date_part'); // should divide this by 1000 to get seconds
     const dailyTimeStatsArr = millisecTimeStatsArr.map((millisecondElement) => {
-      return millisecondElement/1000
+      return millisecondElement/1000 * 60 // returns time in minutes, numeric
     })
 
     // math to calculate completion stats
