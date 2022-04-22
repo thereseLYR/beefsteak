@@ -13,6 +13,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -26,5 +27,8 @@
     "url": "https://github.com/thereseLYR/beefsteak/issues"
   },
   "homepage": "https://github.com/thereseLYR/beefsteak#readme",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
 }

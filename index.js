@@ -1,4 +1,4 @@
-import express, { json, request } from 'express';
+import express, { json, raw, request } from 'express';
 import pg from 'pg';
 import methodOverride from 'method-override';
 import jsSHA from 'jssha';
@@ -53,6 +53,14 @@ const loginCheck = (req, res, next) => {
   next();
 };
 
+const getChartDataArr = function(statsArr, key){
+  let newCountArr = [];
+  statsArr.forEach((taskObject) => {
+    newCountArr.push(taskObject[key])
+  })
+  return newCountArr
+}
+
 app.get('/', (req, res) => {
   if(req.cookies.sessionTasks){
     res.redirect('/inprogress')
@@ -70,7 +78,7 @@ app.post('/tasklist/list', (req, res) => {
     const taskQueryArr = [inputs['task-1'], inputs['task-2'], inputs['task-3']]
 
     // edit query to include userID if user is logged in
-    console.log('req.cookies', req.cookies)
+    // console.log('req.cookies', req.cookies)
     if(req.cookies.userID){
       listQueryValues.push(req.cookies.userID)
       listQueryString = `INSERT INTO task_lists (list_name, list_description, assigned_user) VALUES ($1, $2, $3) RETURNING id`
@@ -96,8 +104,8 @@ app.post('/tasklist/list', (req, res) => {
         res.redirect('/inprogress');
       })
       .catch((error) => {
-        console.log('ERROR CAUGHT')
-        console.error(error.message)
+        console.log('ERROR CAUGHT');
+        console.error(error.message);
       })
   
 })
@@ -160,7 +168,7 @@ app.post('/login', (req, res) => {
   });
   });
 
-app.get('/group', loginCheck, (req, res) => {
+app.get('/groups', loginCheck, (req, res) => {
   // check if user is currently in a group
   // if yes, redirect to group-specific page with task history and stats
   // if no, render page to prompt user to join a group or create a new group
@@ -174,12 +182,16 @@ app.get('/group', loginCheck, (req, res) => {
         // console.log(result)
         const userGroupId = result['rows'][0]['groupid']
         if(userGroupId == null){
-          res.render('error', { message: 'hey you arent in a group, please join one.' });
+          res.redirect('/groups/join');
         } else {
-          res.render('error', { message: 'this is your group page.' });
+          res.render('groups');
         }
       })
   }
+})
+
+app.get('/groups/join', loginCheck, (req, res) => {
+  res.render('groups-join')
 })
 
 app.get('/new', (req, res) => {
@@ -208,10 +220,10 @@ app.get('/inprogress', (req, res) => {
         .query(selectTasksQueryStr)
         .then((result) => {
           // to remove elements of task_info if task name is empty
-        DBTasksObj['task_info'] = result['rows']
+          DBTasksObj['task_info'] = result['rows']
       })
         .then(() => {
-          // console.log(DBTasksObj['task_info'][0])
+          console.log(DBTasksObj['task_info'])
         res.render('tasks-inprogress', DBTasksObj) 
         })  
     })
@@ -233,6 +245,13 @@ app.put("/inprogress/task/:taskID/edit", (req, res) => {
     
 })
 
+app.post("/failed/list/:listID", (req, res) => {
+  // user will be routed here is they take > 25min to complete a tasklist
+  // DO NOT update tasklist status - render retry page
+  const listID = req.params.listID
+  res.render('error', { message: 'please try again~' })
+})
+
 app.post("/complete/list/:listID", (req, res) => {
   // query to update tasklist completion status and datetime based on cookie information
   const listID = req.params.listID
@@ -240,7 +259,7 @@ app.post("/complete/list/:listID", (req, res) => {
   pool
     .query(listCompletionQueryStr)
     .then((result) => {
-      console.log(result)
+      // console.log(result)
       res.clearCookie('sessionTasks') // delete tasks cookie
       res.cookie('lastSession', listID) // create new cookie for prev session
       // to add report for last session in EJS
@@ -357,26 +376,149 @@ app.get('/profile/view/:userID', (req, res) => {
   const userHistoryQueryStr = `SELECT * FROM task_lists WHERE assigned_user = ${requestedUserID}`;
   const userDataQueryStr = `SELECT user_name, first_name, last_name from users WHERE id = ${requestedUserID}`;
 
+// i know having lots of long queries is a dumb way to pull data
+// probably
+// but idk so i'll fix it later
+// might be able to use a loop to generate the query strings??
+
+  const tMinusOneWeekStatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch' from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 7 AND current_date - 1) 
+  AND tasks.completion_status = true;
+  `
+  const tMinus0StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch' from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks 
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 1 AND now())
+  AND tasks.completion_status = true;
+  `
+ 
+  const tMinus1StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch'from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 2 AND current_date - 1)
+  AND tasks.completion_status = true;
+  `
+  const tMinus2StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch'from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 3 AND current_date - 2)
+  AND tasks.completion_status = true;
+  `
+
+  const tMinus3StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch'from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 4 AND current_date - 3)
+  AND tasks.completion_status = true;
+  `
+
+  const tMinus4StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch'from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 5 AND current_date - 4)
+  AND tasks.completion_status = true;
+  `
+
+  const tMinus5StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch'from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 6 AND current_date - 5)
+  AND tasks.completion_status = true;
+  `
+
+  const tMinus6StatsQueryStr = `
+  SELECT count(1), 
+  extract('epoch'from (sum(tasks.completion_datetime - tasks.created_at))) 
+  FROM tasks  
+  INNER JOIN task_lists ON tasks.list_id = task_lists.id
+  INNER JOIN users ON task_lists.assigned_user = users.id
+  WHERE users.id  = ${requestedUserID} 
+  AND (tasks.created_at BETWEEN current_date - 7 AND current_date - 6)
+  AND tasks.completion_status = true;
+  `
+
   const results = Promise.all([
   pool.query(userHistoryQueryStr),
   pool.query(userDataQueryStr),
+
+  // every query below this is just pulling stats
+  pool.query(tMinusOneWeekStatsQueryStr),
+  pool.query(tMinus0StatsQueryStr),
+  pool.query(tMinus1StatsQueryStr),
+  pool.query(tMinus2StatsQueryStr),
+  pool.query(tMinus3StatsQueryStr),
+  pool.query(tMinus4StatsQueryStr),
+  pool.query(tMinus5StatsQueryStr),
+  pool.query(tMinus6StatsQueryStr)
   ])
 
   results.then((combinedResults) => {
-    const [ historyResults, userResults ] = combinedResults
+    const [ historyResults, userResults, statsResults, tMinus0Results, tMinus1Results, tMinus2Results, tMinus3Results, tMinus4Results, tMinus5Results, tMinus6Results] = combinedResults
     const userTasks = historyResults.rows
     const userData = userResults.rows[0]
+    // userweekly stats is not fed into the profile EJS yet, as it is not included in the userSummaryObj
+    const userWeeklyStats = statsResults.rows
+
+    // daily stats compilation and processing
+    const minus0Stats = tMinus0Results.rows
+    const minus1Stats = tMinus1Results.rows
+    const minus2Stats = tMinus2Results.rows
+    const minus3Stats = tMinus3Results.rows
+    const minus4Stats = tMinus4Results.rows
+    const minus5Stats = tMinus5Results.rows
+    const minus6Stats = tMinus6Results.rows
+
+    const rawDailyStatsArr = [minus6Stats, minus5Stats, minus4Stats, minus3Stats, minus2Stats, minus1Stats, minus0Stats]
+    const flattenedDailyStatsArr = rawDailyStatsArr.map((resultsArr) => {
+      return resultsArr[0]
+    })
+    const dailyTasksCompletedStatsArr = getChartDataArr(flattenedDailyStatsArr, 'count');
+    const millisecTimeStatsArr = getChartDataArr(flattenedDailyStatsArr, 'date_part'); // should divide this by 1000 to get seconds
+    const dailyTimeStatsArr = millisecTimeStatsArr.map((millisecondElement) => {
+      return millisecondElement/1000
+    })
 
     // math to calculate completion stats
-    const numOfCreatedLists = userTasks.length
+    const numOfCreatedLists = userTasks.length;
     const completedListsArr = userTasks.filter((listObj) => {
       return listObj['completion_status'] == true
     })
     const numOfCompletedLists = completedListsArr.length
     const percentageListCompletion = Math.round((numOfCompletedLists/numOfCreatedLists)*100) // round percentage to nearest integer
     const userStats = { numOfCreatedLists, percentageListCompletion}
-    const userSummaryObj = { userTasks, userData, userStats }
-
+    const chartStats = { dailyTasksCompletedStatsArr, dailyTimeStatsArr }
+    const userSummaryObj = { userTasks, userData, userStats, chartStats }
+    // console.log(chartStats)
     res.render('profile', userSummaryObj)
   })
 })

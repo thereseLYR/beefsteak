@@ -1,0 +1,38 @@
+<script>
+  new Chart(document.getElementById("myChart"), {
+    type: 'bar',
+    data: {
+      labels: ["6 Days Ago", "5 Days Ago", "4 Days Ago", "3 Days Ago", "2 Days Ago", "Yesterday", "Today"],
+      datasets: [{
+        label: "Time in Focus",
+        type: "line",
+        backgroundColor: "rgb(138, 201, 38)",
+        borderColor: "rgb(138, 201, 38)",
+        data: [<%= chartStats['dailyTimeStatsArr'] %>],
+        fill: false
+      }, {
+        label: "Tasks Created",
+        type: "bar",
+        backgroundColor: "rgba(116, 18, 29, 0.8)",
+        borderColor: "rgb(116, 18, 29)",
+        data: [14, 9, 6, 12, 4, 7, 16], // this is dummy data
+      }, {
+        label: "Tasks Completed",
+        type: "bar",
+        backgroundColor: "rgba(202, 45, 2, 0.8)",
+        borderColor: "rgb(202, 45, 2)",
+        backgroundColorHover: "#3e95cd",
+        data: [<%= chartStats['dailyTasksCompletedStatsArr'] %>]
+      }]
+    },
+    options: {
+      title: {
+        display: true,
+        text: 'Population growth (millions): Europe & Africa'
+      },
+      legend: {
+        display: false
+      }
+    }
+  });
+</script>

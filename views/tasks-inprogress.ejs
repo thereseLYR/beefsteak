@@ -22,7 +22,7 @@
   <div>
     <h1 class="text-center"><%= list_info[0]['list_name'] %></h1>
   </div>
-  <div>
+  <div class="mx-2">
     <p class="text-center text-muted">
       <%= list_info[0]['list_description'] %>
     </p>
@@ -31,7 +31,7 @@
   <% let completedTasksCount = 0 %>
 
   <!-- tasks are visually marked as complete now -->
-  <div class="list-group mx-5">
+  <div class="list-group mx-2">
     <% for (let i = 0; i < task_info.length; i += 1) { %>
     <% if(task_info[i]['completion_status'] == true){ %>
     <% completedTasksCount += 1 %>
@@ -111,9 +111,9 @@
       if (elapsedTime <= 0) {
         stopButtonFunction();
         window.alert(`Time's up!`);
+        localStorage.clear();
         // force a POST by sending a hidden form
-        // currently always marks a task as complete - change route?
-        post("/complete/list/<%= list_info[0]['id']%>");
+        post("/failed/list/<%= list_info[0]['id']%>");
       } else {
         let minutes = Math.floor(elapsedTime / 60);
         let seconds = elapsedTime - minutes * 60;
@@ -138,7 +138,7 @@
       stopped = false;
       timerInterval = setInterval(() => {
         currentElapsedTime -= 1;
-        console.log("currentElapsedTime", currentElapsedTime);
+        // console.log("currentElapsedTime", currentElapsedTime);
         showTime(document.getElementById("elapsedTime"), currentElapsedTime);
       }, 1000);
     };
@@ -152,7 +152,8 @@
       // start timer immediately if time is detected
       startButtonFunction();
     } else {
-      currentElapsedTime = 16; // ~ 15s, short duration for testing
+      currentElapsedTime = 1501; // full 25min duration, which doesnt seem to display correctly
+      // currentElapsedTime = 16; // ~ 15s, short duration for testing
     }
 
     const startButton = document.getElementById("startButton");
@@ -160,7 +161,7 @@
 
     // Setting Event Listeners
     window.onload = function() {
-      startButtonFunction();
+      // startButtonFunction();
       startButton.addEventListener("click", () => {
         startButtonFunction();
       });

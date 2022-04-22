@@ -9,9 +9,9 @@
   <div id="cover"></div>
   <%- include('./partials/navbar.ejs') %>
 
-  <div id="timeSection" class="timeSection">
-    <h1 id="elapsedTime" class="elapsedTime">25 : 00</h1>
-    <div id="functionButtons" class="functionButtons">
+  <div class="text-center mx-2 my-5">
+    <h1 id="elapsedTime" style="font-size: 72pt;">25 : 00</h1>
+    <div id="functionButtons">
       <button id="startButton" class="btn btn-primary disabled" disabled>
         Start
       </button>
@@ -21,9 +21,9 @@
     </div>
   </div>
 
-  <div class="d-flex justify-content-center">
+  <div class="d-flex justify-content-center mx-2">
     <form action="/tasklist/list" method="POST">
-      <p>Create a Tasklist, and then start your timer.</p>
+      <p class="text-center text-muted">Create a Tasklist, and then start your timer.</p>
 
       <div class="my-1">
         <label for="list-name"><b>Tasklist Name</b></label><br />

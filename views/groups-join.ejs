@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <%- include('./partials/head.ejs') %>
+</head>
+
+<body>
+  <div id="cover"></div>
+  <%- include('./partials/navbar.ejs') %>
+
+  <div class="my-2 mx-2">
+    <h1 class="text-center">Hey, looks like you arent't in a group yet...</h1>
+    <p class="fs-6 text-center"> Enter the ID of the group you'd like to join!</p>
+    <div>
+      <form action="/groups/join" method="POST">
+        <div class="my-1">
+          <label for="groupId"><b>Group ID</b></label><br />
+          <input type="text" class="form-control" placeholder="1934" name="groupId" required />
+        </div>
+        <div class="d-grid gap-2 my-2">
+          <button class="btn btn-primary" type="submit">Join</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="text-center">
+      <a href="/groups/new">
+        No thanks, I want to create a group instead!
+      </a>
+    </div>
+
+
+
+  </div>
+
+  <!-- Optional JavaScript -->
+  <script>
+    src =
+      "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js";
+    integrity =
+      "sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p";
+    crossorigin = "anonymous";
+  </script>
+</body>
+
+</html>
