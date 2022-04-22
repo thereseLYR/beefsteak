@@ -53,7 +53,7 @@
   <form id="submitButton" action="/complete/list/<%= list_info[0]['id'] %>" method="POST">
     <input type="hidden">
     <label class="d-grid gap-2 my-2 mx-5">
-      <input class="btn btn-primary" type="submit" value="All Done!">
+      <input class="btn btn-success" type="submit" value="All Done!">
     </label>
   </form>
   <% } %>
@@ -84,7 +84,6 @@
      * @param {string} [method=post] the method to use on the form
      * from https://stackoverflow.com/questions/133925/javascript-post-request-like-a-form-submit
      */
-
     function post(path, params, method = "post") {
       // The rest of this code assumes you are not using a library.
       // It can be made less verbose if you use one.

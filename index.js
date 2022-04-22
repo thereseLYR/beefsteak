@@ -92,7 +92,6 @@ app.get('/', (req, res) => {
 
 app.post('/tasklist/list', (req, res) => {
     const inputs = req.body;
-    // let taskCookieObj = { task_list_id: 0, task_ids_array: []};
     const taskCookieObj = { task_names_array: [] };
 
     let listQueryString = `INSERT INTO task_lists (list_name, list_description) VALUES ($1, $2) RETURNING id`;
@@ -119,10 +118,8 @@ app.post('/tasklist/list', (req, res) => {
         })
       })
       .then( () => {
-        // console.log('taskCookieObj:', taskCookieObj)
         // cookie will be used to generate list for users to strike off their tasks
         res.cookie('sessionTasks', taskCookieObj)
-        // change redirect to another page later
         res.redirect('/inprogress');
       })
       .catch((error) => {
@@ -218,8 +215,6 @@ app.get('/groups', loginCheck, (req, res) => {
           .query(groupTasksQueryStr)
           .then((result) => {
             const groupTasksData = result.rows
-            console.log(groupTasksData)
-            // console.log(result.rows.length)
             res.render('groups', { usersDataObj, groupTasks: groupTasksData });
           })
       }
@@ -423,9 +418,7 @@ app.get('/complete/list/:listID', (req, res) => {
 
 app.delete('/complete/list/:listID/delete', loginCheck, (req, res) => {
   // buttons for this method are only rendered if user is signed in + owns the tasklist, no additional check if user if allowed to edit page
-  console.log(req.params)
   const listIdToDelete = req.params.listID
-  console.log(listIdToDelete)
   const listDeletionQuery = `DELETE from task_lists WHERE id = ${listIdToDelete};`
   pool
     .query(listDeletionQuery)
