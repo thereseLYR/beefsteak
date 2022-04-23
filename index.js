@@ -369,10 +369,10 @@ app.post("/complete/list/:listID", (req, res) => {
 
         if(!userData[0]){
           userData[0] = {}
-          console.log('guest user detected!')
+          // console.log('guest user detected!')
           userData[0]['id'] = 0
           userData[0]['user_name'] = 'guest'
-          console.log(userData[0])
+          // console.log(userData[0])
         }
 
         // ensures that edit/delete buttons only appear for the owning logged-in user
@@ -413,6 +413,14 @@ app.get('/complete/list/:listID', (req, res) => {
     // we will only use minutes and seconds for our purpouses
     // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
     const listSummaryObj = {listData, taskData, userData}
+
+    if(!userData[0]){
+          userData[0] = {}
+          // console.log('guest user detected!')
+          userData[0]['id'] = 0
+          userData[0]['user_name'] = 'guest'
+          // console.log(userData[0])
+        }
 
     // ensures that edit/delete buttons only appear for the owning logged-in user
     if(req.cookies.userID == userData[0]['id']){
