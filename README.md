@@ -24,4 +24,4 @@ A task-oriented time management app that's a bit juicer than your average pomodo
 
 #### Entity Relationship Diagram
 
-![[public/Project 2 Planning.png]]
+![Beefsteak ERD](./public/beefsteak_ERD.png)
