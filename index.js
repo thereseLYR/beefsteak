@@ -21,7 +21,8 @@ const pgConnectionConfigs = {
 const pool = new Pool(pgConnectionConfigs);
 
 // Auth stuff
-
+// normally, the salt would be stored as an environment variable so it is not directly acessible in code
+// for demo purpouses, an empty salt is used
 const SALT = ''
 
 /**
@@ -39,6 +40,13 @@ const getHash = (input) => {
   return shaObj.getHash('HEX');
 };
 
+/**
+ * checks and sets login status to restrict certain routes to unly be usable by logged-in users
+ * compares the existing hash cookie to a resh hash of the raw userId cookie to verify that no changes were made by the user
+ * @param {*} req - request as sent by client
+ * @param {*} res - response as sent by server
+ * @param {func} next - next function to execute
+ */
 const loginCheck = (req, res, next) => {
   if (!req.cookies.userIdHash) {
     res.render('error', { message: 'Please log in to continue.' });
@@ -49,11 +57,17 @@ const loginCheck = (req, res, next) => {
     req.isUserLoggedIn = true;
     res.locals.userId = req.cookies.userIdHash; // pass userId of the user into middleware (as hashed).
     app.locals.userId = req.cookies.userId
-    // use app.locals to define your own 'global variables' in EJS files. useful for things like navbears where you want to have dynamic content like updating a welcome message with the user's name.
   }
   next();
 };
 
+/**
+ *
+ *
+ * @param {array} statsArr - array of objects which contain a certain target key
+ * @param {string} key - key to indicate which values to extract from the input array of objects
+ * @return {*} array contianing only the values of the target key as extracted from the input array of objects
+ */
 const getChartDataArr = function(statsArr, key){
   let newCountArr = [];
   statsArr.forEach((taskObject) => {
@@ -83,6 +97,7 @@ const checkIDInTable = async function(id, table){
     })
 }
 
+// routes
 app.get('/', (req, res) => {
   if(req.cookies.sessionTasks){
     res.redirect('/inprogress')
@@ -455,7 +470,6 @@ app.get("/complete/last", (req, res) => {
   res.redirect(`/complete/list/${latestTasklistID}`)
 })
 
-// i should make a logout button
 app.get('/logout', (req, res) => {
   res.clearCookie('userIdHash')
   res.clearCookie('userID')
