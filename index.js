@@ -14,12 +14,25 @@ app.use(express.static('public'));
 app.use(cookieParser());
 
 const { Pool } = pg;
-const pgConnectionConfigs = {
-	user: 'postgres',
-	host: 'localhost',
-	database: 'beefsteak',
-	port: 5432, // Postgres server always runs on this port by default
-};
+let pgConnectionConfigs;
+if (process.env.DATABASE_URL) {
+  // pg will take in the entire value and use it to connect
+  pgConnectionConfigs = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  };
+} else {
+  // this is the same value as before
+  pgConnectionConfigs = {
+    user: 'postgres',
+    host: 'localhost',
+    database: 'beefsteak',
+    port: 5432, // Postgres server always runs on this port by default
+  };
+}
+
 const pool = new Pool(pgConnectionConfigs);
 
 // Auth stuff

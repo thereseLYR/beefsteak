@@ -1,10 +1,3 @@
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS groups;
-DROP TABLE IF EXISTS task_lists;
-DROP TABLE IF EXISTS tasks;
-
-CREATE DATABASE beefsteak;
-
 CREATE TABLE users(
   id SERIAL PRIMARY KEY,
   user_name TEXT, 
