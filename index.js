@@ -4,6 +4,8 @@ import methodOverride from 'method-override';
 import jsSHA from 'jssha';
 import cookieParser from 'cookie-parser';
 
+const PORT = process.env.PORT || 3004;
+
 const app = express()
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: false }));
@@ -638,4 +640,4 @@ app.get('/profile/view/:userID', (req, res) => {
   })
 })
 
-app.listen(3000, () => console.log('Server Started'))
+app.listen(PORT, () => console.log('Server Started'))
