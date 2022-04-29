@@ -1,6 +1,6 @@
 # beefsteak
 
-[beefsteak logo](./public/beefsteak_logo.svg)
+![beefsteak logo](./public/beefsteak_logo.svg)
 
 A task-oriented time management app that's a bit juicer than your average pomodoro.
 
@@ -10,6 +10,8 @@ The core functionality of this app revolves around breaking tasks down into bite
 Since this app introduces additional features to aid in keeping longer-term productivity, such as personal tracking to view your own time in focus, and user groups to connect with other individuals who might be working on similar tasks, i.e. a tomato (pomodoro) with additional features (juicier). I picked the variety of tomato that is best known for its juiciness, and named by app after it.
 
 TLDR: i created an entire app to make a tomato pun
+
+HEROKU DEPLOYMENT LINK >>> [protected-everglades-33955](https://protected-everglades-33955.herokuapp.com/)
 
 #### Features
 

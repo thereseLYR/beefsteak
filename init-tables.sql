@@ -14,7 +14,7 @@ CREATE TABLE groups(
   group_name TEXT,
   owner_id INTEGER,
   group_description TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE task_lists(
