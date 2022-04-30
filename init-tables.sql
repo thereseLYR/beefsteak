@@ -18,7 +18,7 @@ CREATE TABLE groups(
 );
 
 CREATE TABLE task_lists(
-  list_id SERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   owner_group INTEGER,
   assigned_user INTEGER,
   list_name TEXT,
@@ -29,7 +29,7 @@ CREATE TABLE task_lists(
 );
 
 CREATE TABLE tasks(
-  task_id SERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   list_id INTEGER,
   task_name TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),

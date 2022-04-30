@@ -164,7 +164,6 @@ app.get('/register', (req, res) => {
 })
 
 app.post('/register', (req, res) => {
-  // console.log('attempting POST')
   const hashedPassword = getHash(req.body.password)
   
   // store the hashed password in our DB
@@ -282,14 +281,12 @@ app.get('/groups/new', loginCheck, (req, res) => {
 })
 
 app.post('/groups/new', loginCheck, (req, res) => {
-  console.log(req.body)
   const createGroupQueryStr = `INSERT INTO groups (group_name, group_description, owner_id) VALUES ($1, $2, $3) RETURNING id`
   const createGroupQueryValues = [ req.body['group-name'], req.body['group-description'], req.cookies['userID'] ]
 
   pool
     .query(createGroupQueryStr, createGroupQueryValues)
     .then((results) => {
-      console.log('results:', results)
       res.redirect('/groups')
     })
     .catch((error) => {
@@ -327,7 +324,6 @@ app.get('/inprogress', (req, res) => {
           DBTasksObj['task_info'] = result['rows']
       })
         .then(() => {
-          // console.log(DBTasksObj['task_info'])
           res.render('tasks-inprogress', DBTasksObj) 
         })  
     })
@@ -339,7 +335,6 @@ app.put("/inprogress/task/:taskID/edit", (req, res) => {
   pool
     .query(taskCompletionQueryStr)
     .then((result) =>{
-      // console.log(result)
       res.redirect('/inprogress')
     })
     .catch((error) => {
@@ -395,20 +390,15 @@ app.post("/complete/list/:listID", (req, res) => {
         // this can be accessed from listSummaryObj['taskData'][i]['duration']['minutes']
         const listSummaryObj = {listData, taskData, userData}
 
-        console.log(userData[0])
-
         if(!userData[0]){
           userData[0] = {}
-          // console.log('guest user detected!')
           userData[0]['id'] = 0
           userData[0]['user_name'] = 'guest'
-          // console.log(userData[0])
         }
 
         // ensures that edit/delete buttons only appear for the owning logged-in user
         if(req.cookies.userID == userData[0]['id']){
           listSummaryObj['userEditStatus'] = true
-          // console.log(listSummaryObj)
         } else {
           listSummaryObj['userEditStatus'] = false
         }
@@ -446,16 +436,13 @@ app.get('/complete/list/:listID', (req, res) => {
 
     if(!userData[0]){
           userData[0] = {}
-          // console.log('guest user detected!')
           userData[0]['id'] = 0
           userData[0]['user_name'] = 'guest'
-          // console.log(userData[0])
         }
 
     // ensures that edit/delete buttons only appear for the owning logged-in user
     if(req.cookies.userID == userData[0]['id']){
       listSummaryObj['userEditStatus'] = true
-      // console.log(listSummaryObj)
     } else {
       listSummaryObj['userEditStatus'] = false
     }
@@ -647,8 +634,6 @@ app.get('/profile/view/:userID', (req, res) => {
     const userStats = { numOfCreatedLists, percentageListCompletion}
     const chartStats = { dailyTasksCompletedStatsArr, dailyTimeStatsArr }
     const userSummaryObj = { userTasks, userData, userStats, chartStats }
-    // console.log(userSummaryObj)
-    // console.log(chartStats)
     res.render('profile', userSummaryObj)
   })
 })
